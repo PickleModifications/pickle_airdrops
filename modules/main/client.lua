@@ -37,9 +37,9 @@ function CreateLocalAirdrop(id, data)
     LocalAirdrops[id].planeObject = CreateProp(`prop_tennis_ball`, data.coords.x, data.coords.y, data.coords.z + skyHeight, false, false, false)
     SetEntityHeading(LocalAirdrops[id].planeObject, data.heading)
     local forwardVector = GetEntityForwardVector(LocalAirdrops[id].planeObject)
-    local planeCoords = data.coords + forwardVector * -(planeSpeed * 100)
+    local planeCoords = data.coords --+ forwardVector * -(planeSpeed * 100)
     planeCoords = vector3(planeCoords.x, planeCoords.y, planeCoords.z + skyHeight)
-    local dropCoords = vector3(data.coords.x, data.coords.y, data.coords.z + skyHeight)
+    local dropCoords = vector3(data.coords.x, data.coords.y, data.coords.z + 1.0)
     LocalAirdrops[id].plane = CreateVeh(`jet`, planeCoords.x, planeCoords.y, planeCoords.z, 0.0, false, false)
     FreezeEntityPosition(LocalAirdrops[id].plane, true)
     SetEntityCollision(LocalAirdrops[id].plane, false, false)
@@ -128,7 +128,7 @@ function DeleteLocalAirdrop(id)
     LocalAirdrops[id] = nil
 end
 
-CreateThread(function()
+RegisterNUICallback("pageLoaded", function(data, cb)
     while not Inventory or not Inventory.Ready do Wait(100) end
     SendNUIMessage({
         type = "setConfig",
@@ -136,6 +136,7 @@ CreateThread(function()
             items = Inventory.Items,
         }
     })
+    cb("ok")
 end)
 
 RegisterNetEvent("pickle_airdrops:startAirdrop", function(id, data)
