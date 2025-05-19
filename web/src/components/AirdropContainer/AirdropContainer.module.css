@@ -1,0 +1,7 @@
+.lootContainer {
+    color: white;
+    position: absolute;
+    width: 400px;
+    background: linear-gradient(to top, rgba(9, 9, 11, 1) 85%, transparent);
+    transition: position 1ms linear;
+}

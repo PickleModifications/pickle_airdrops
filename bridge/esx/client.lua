@@ -89,7 +89,6 @@ CreateThread(function()
     Inventory.Ready = false
     
     RegisterNetEvent("pickle_airdrops:setupInventory", function(data)
-        print(data.items)
         Inventory.Items = data.items
         Inventory.Ready = true
     end)
