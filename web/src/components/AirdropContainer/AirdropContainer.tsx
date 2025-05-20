@@ -27,10 +27,18 @@ type AirdropContainerInfo = {
     scale: number;
     image: string;
     label: string;
+    unlockTime: number;
     description: string;
     maxSlots: number;
     items: AirdropContainerItem[];
 };
+
+function GetCountdownText(seconds: number) {
+    // use 00:00 format
+    const minutes = Math.floor(seconds / 60);
+    const secondsLeft = seconds % 60;
+    return `${minutes.toString().padStart(2, "0")}:${secondsLeft.toString().padStart(2, "0")}`;
+}
 
 function AirdropContainer({ containerInfo }: { containerInfo: AirdropContainerInfo }) {
     const { config } = useConfig();
@@ -167,16 +175,24 @@ function AirdropContainerHUD() {
                         </div>
                     </div>
                     <div className={classes.lootControls} style={{gap: "6px", display:"flex", alignItems: "center", padding: "6px 12px", borderTop: "1px solid #27272A"}}>
-                        <div className="relative w-6 h-6 bg-white text-black rounded-sm flex items-center justify-center" style={{
-                            filter: (scale < 1 ? "brightness(0.5)" : "brightness(1)"),
-                        }}>
-                            <div className="font-bold text-sm absolute top-[50%] left-[50%] z-1" style={{transform: "translate(-50%, -50%)"}}>
-                                E
-                            </div>
-                        </div>
-                        <div className="font-bold text-xl">
-                            <Translate id="controls_exit" />
-                        </div>
+                            {airdropContainer.unlockTime > 0 ? (
+                                <div className="font-semibold text-sm text-zinc-400">
+                                    <Translate id="airdrop_container_unlock_time" args={[GetCountdownText(airdropContainer.unlockTime)]} />
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="relative w-6 h-6 bg-white text-black rounded-sm flex items-center justify-center" style={{
+                                        filter: (scale < 1 ? "brightness(0.5)" : "brightness(1)"),
+                                    }}>
+                                        <div className="font-bold text-sm absolute top-[50%] left-[50%] z-1" style={{transform: "translate(-50%, -50%)"}}>
+                                            E
+                                        </div>
+                                    </div>
+                                    <div className="font-bold text-xl">
+                                        <Translate id="airdrop_interact" />
+                                    </div>
+                                </>
+                            )}
                     </div>
                 </div>
             )}

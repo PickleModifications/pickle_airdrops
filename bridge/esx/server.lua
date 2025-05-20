@@ -232,6 +232,10 @@ CreateThread(function()
     end
 
     Inventory.AddWeapon = function(source, name, count, metadata) -- Metadata is not required.
+        if Config.WeaponsAreItems then 
+            Inventory.AddItem(source, name, count, metadata)
+            return
+        end
         local xPlayer = ESX.GetPlayerFromId(source)
         xPlayer.addWeapon(name, 0)
         Inventory.UpdateInventory(source)

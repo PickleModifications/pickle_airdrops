@@ -20,28 +20,35 @@ function SetEntityScale(entity, scale)
     )
 end
 
-function CreateScriptedBlip(obj, blipType)
-    local blipCfg = Config.Blips[blipType]
-    if not blipCfg then return end
-    local blip = type(obj) == "number" and AddBlipForEntity(obj) or AddBlipForCoord(obj.x, obj.y, obj.z)
-    SetBlipSprite(blip, blipCfg.sprite or 1)
-    SetBlipColour(blip, blipCfg.color or 1)
-    SetBlipScale(blip, blipCfg.scale or 0.8)
-    SetBlipCategory(blip, blipCfg.category or 0)
-    SetBlipDisplay(blip, blipCfg.display or 4)
-    if type(obj) == "number" then
-        SetBlipRotation(blip, math.ceil(GetEntityHeading(obj)))
+function CreateScriptedBlip(obj, blipType, data)
+    if blipType ~= "radius" then
+        local blipCfg = Config.Blips[blipType]
+        if not blipCfg then return end
+        local blip = type(obj) == "number" and AddBlipForEntity(obj) or AddBlipForCoord(obj.x, obj.y, obj.z)
+        SetBlipSprite(blip, blipCfg.sprite or 1)
+        SetBlipColour(blip, blipCfg.color or 1)
+        SetBlipScale(blip, blipCfg.scale or 0.8)
+        SetBlipCategory(blip, blipCfg.category or 0)
+        SetBlipDisplay(blip, blipCfg.display or 4)
+        if type(obj) == "number" then
+            SetBlipRotation(blip, math.ceil(GetEntityHeading(obj)))
+        end
+        BeginTextCommandSetBlipName("STRING")
+        AddTextComponentString(_L(blipType))
+        EndTextCommandSetBlipName(blip)
+        local radiusBlip = nil
+        if blipCfg.radius then
+            radiusBlip = AddBlipForRadius(obj.x, obj.y, obj.z, blipCfg.radius.size or 10.0)
+            SetBlipAlpha(radiusBlip, 128)
+            SetBlipColour(radiusBlip, blipCfg.radius.color or 1)
+        end
+        return {blip = blip, radiusBlip = radiusBlip}
+    else
+        local radiusBlip = AddBlipForRadius(obj.x, obj.y, obj.z, data.radius or 1.0)
+        SetBlipAlpha(radiusBlip, Config.RadiusBlip.alpha or 128)
+        SetBlipColour(radiusBlip, Config.RadiusBlip.color or 1)
+        return {radiusBlip = radiusBlip}
     end
-    BeginTextCommandSetBlipName("STRING")
-    AddTextComponentString(_L(blipType))
-    EndTextCommandSetBlipName(blip)
-    local radiusBlip = nil
-    if blipCfg.radius then
-        radiusBlip = AddBlipForRadius(obj.x, obj.y, obj.z, blipCfg.radius.size or 10.0)
-        SetBlipAlpha(radiusBlip, 128)
-        SetBlipColour(radiusBlip, blipCfg.radius.color or 1)
-    end
-    return {blip = blip, radiusBlip = radiusBlip}
 end
 
 function CreateLocalAirdrop(id, data)
@@ -50,13 +57,15 @@ function CreateLocalAirdrop(id, data)
     end
     LocalAirdrops[id] = {
         id = id,
+        radius = data.radius,
+        radiusBlipEnabled = data.radiusBlipEnabled,
+        dropBlipEnabled = data.dropBlipEnabled,
         coords = data.coords,
         heading = data.heading,
-        items = data.items,
-        maxSlots = data.maxSlots,
+        containers = data.containers,
     }
-    local dropModel = `sm_prop_smug_crate_01a`
-    local parachuteModel = `gr_prop_gr_para_s_01`
+    local dropModel = data.dropModel
+    local parachuteModel = data.parachuteModel
     local dropType = "object"
     local planeSpeed = 2.0
     local dropSpeed = 0.2
@@ -64,15 +73,29 @@ function CreateLocalAirdrop(id, data)
     LocalAirdrops[id].planeObject = CreateProp(`prop_tennis_ball`, data.coords.x, data.coords.y, data.coords.z + skyHeight, false, false, false)
     SetEntityHeading(LocalAirdrops[id].planeObject, data.heading)
     local forwardVector = GetEntityForwardVector(LocalAirdrops[id].planeObject)
-    local planeCoords = vector3(data.coords.x, data.coords.y, data.coords.z + skyHeight) --+ forwardVector * -(planeSpeed * 1000)
+    local planeCoords = vector3(data.coords.x, data.coords.y, data.coords.z + skyHeight) + forwardVector * -(planeSpeed * 1000)
     local planeDespawnCoords = vector3(data.coords.x, data.coords.y, data.coords.z + skyHeight) + forwardVector * (planeSpeed * 1000)
-    local dropCoords = vector3(data.coords.x, data.coords.y, data.coords.z + 1)--(skyHeight - 10.0))
+    local dropCoords = vector3(data.coords.x, data.coords.y, data.coords.z + skyHeight - 10.0)
     LocalAirdrops[id].plane = CreateVeh(`jet`, planeCoords.x, planeCoords.y, planeCoords.z, 0.0, false, false)
     FreezeEntityPosition(LocalAirdrops[id].plane, true)
     SetEntityCollision(LocalAirdrops[id].plane, false, false)
     SetEntityInvincible(LocalAirdrops[id].plane, true)
     AttachEntityToEntity(LocalAirdrops[id].plane, LocalAirdrops[id].planeObject, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, false, false, false, 2, true)
     LocalAirdrops[id].planeBlip = CreateScriptedBlip(LocalAirdrops[id].plane, "airdrop_plane_blip")
+    CreateThread(function()
+        local landed = false
+        while LocalAirdrops[id] do
+            local airdrop = LocalAirdrops[id]
+            local airdropContainer = airdrop.containers[1]
+            if airdropContainer.unlockTime <= 0 then 
+                airdropContainer.unlockTime = 0
+                break
+            elseif airdropContainer.timerStarted then
+                airdropContainer.unlockTime = airdropContainer.unlockTime - 1
+            end
+            Wait(1000)
+        end
+    end)
     CreateThread(function()
         local landed = false
         while LocalAirdrops[id] do
@@ -108,14 +131,18 @@ function CreateLocalAirdrop(id, data)
                         local paraHeight = paraMaxVec.z - paraMinVec.z
                         airdrop.parachute = CreateProp(parachuteModel, dropCoords.x, dropCoords.y, dropCoords.z, false, false, false)
                         AttachEntityToEntity(airdrop.parachute, airdrop.dropObject, 0, 0.0, 0.0, height + (paraHeight - 2.3), 0.0, 0.0, 0.0, false, false, false, false, 2, true)
-                        airdrop.dropBlip = CreateScriptedBlip(vector3(data.coords.x, data.coords.y, data.coords.z), "airdrop_container_blip")
-                        print(json.encode(airdrop.dropBlip))
+                        if airdrop.radiusBlipEnabled then
+                            airdrop.radiusBlip = CreateScriptedBlip(dropCoords, "radius", {radius = data.radius})
+                        end
                     end
                 elseif #(dropCoords - data.coords) > 1.0 then
                     dropCoords = dropCoords - vector3(0.0, 0.0, dropSpeed)
                     SetEntityCoordsNoOffset(airdrop.dropObject, dropCoords.x, dropCoords.y, dropCoords.z)
                 else
                     landed = true
+                    if not airdrop.containers[1].timerStarted then
+                        TriggerServerEvent("pickle_airdrops:startContainerTimer", id)
+                    end
                     SetEntityCoords(airdrop.dropObject, data.coords.x, data.coords.y, data.coords.z)
                     if dropType == "vehicle" then
                         SetVehicleOnGroundProperly(airdrop.dropObject)
@@ -139,16 +166,31 @@ function CreateLocalAirdrop(id, data)
                         end
                         DeleteEntity(airdrop.parachute)
                     end)
-                    LocalAirdrops[id].interact = CreateInteraction({
-                        label = _L("airdrop_interact"),
-                        icon = Config.TargetIcons and Config.TargetIcons["airdrop_container"] or nil,
-                        coords = data.coords + vector3(0.0, 0.0, 1.0),
-                        heading = data.heading,
-                        radius = 1.25
-                    }, function(selected)
-                        AirdropInteraction(id)
-                    end)
+                    if #airdrop.containers > 1 then
+                        BreakObjectFragmentChild(airdrop.dropObject, 0, false)
+                        ApplyForceToEntityCenterOfMass(airdrop.dropObject, 1, 0.0, 0.0, -500.0, false, false, true, false)
+                        SetTimeout(1000, function()
+                            DeleteEntity(airdrop.dropObject)
+                        end)
+                    else
+                        DeleteEntity(airdrop.dropObject)
+                    end
+                    for containerId, container in pairs(airdrop.containers) do
+                        -- get ground z for x & y
+                        local _, groundZ = GetGroundZExcludingObjectsFor_3dCoord(container.location.coords.x, container.location.coords.y, container.location.coords.z + 1000.0, 0.0, false)
+                        container.coords = vector3(container.location.coords.x, container.location.coords.y, groundZ)
+                        container.heading = container.location.heading
+                        container.dropObject = CreateProp(container.dropModel, container.coords.x, container.coords.y, container.coords.z, false, false, false)
+                        SetEntityHeading(container.dropObject, container.heading)
+                        FreezeEntityPosition(container.dropObject, true)
+                        SetEntityInvincible(container.dropObject, true)
+                        if airdrop.dropBlipEnabled then
+                            container.blip = CreateScriptedBlip(vector3(container.location.coords.x, container.location.coords.y, container.location.coords.z), "airdrop_container_blip")
+                        end
+                    end
                 end
+            elseif landed and not airdrop.planeObject then
+                break
             end
             Wait(0)
         end
@@ -166,6 +208,20 @@ function RemoveScriptedBlip(obj)
             RemoveBlip(obj.radiusBlip)
         end
     end
+end
+
+function RemoveAirdropContainer(id, containerId)
+    if not LocalAirdrops[id] then return end
+    local airdrop = LocalAirdrops[id]
+    if not airdrop.containers[containerId] then return end
+    local container = airdrop.containers[containerId]
+    if container.dropObject then
+        DeleteEntity(container.dropObject)
+    end
+    if container.blip then
+        RemoveScriptedBlip(container.blip)
+    end
+    airdrop.containers[containerId] = nil
 end
 
 function DeleteLocalAirdrop(id)
@@ -186,22 +242,30 @@ function DeleteLocalAirdrop(id)
     if airdrop.planeBlip then
         RemoveScriptedBlip(airdrop.planeBlip)
     end
-    if airdrop.dropBlip then
-        RemoveScriptedBlip(airdrop.dropBlip)
+    if airdrop.radiusBlip then
+        RemoveScriptedBlip(airdrop.radiusBlip)
+    end
+    if airdrop.containers then
+        for containerId, container in pairs(airdrop.containers) do
+            RemoveAirdropContainer(id, containerId)
+        end
     end
     LocalAirdrops[id] = nil
 end
 
-function AirdropInteraction(id)
+function AirdropInteraction(id, containerId)
     if not LocalAirdrops[id] then return end
-    CurrentAirdropContainer = {id = id}
+    CurrentAirdropContainer = {id = id, containerId = containerId}
     local airdrop = LocalAirdrops[id]
+    if not airdrop then return end
+    local airdropContainer = airdrop.containers[containerId]
+    if not airdropContainer then return end
     SendNUIMessage({
         type = "setContainerInfo",
         containerInfo = {
             id = id,
-            items = airdrop.items,
-            maxSlots = airdrop.maxSlots,
+            items = airdropContainer.items,
+            maxSlots = airdropContainer.maxSlots,
         }
     })
     SetNuiFocus(true, true)
@@ -224,16 +288,23 @@ CreateThread(function()
         local wait = 1500
         local closestAirdrop = nil
         local playerCoords = GetEntityCoords(PlayerPedId())
-        for k,v in pairs(LocalAirdrops) do 
-            local distance = #(playerCoords - v.coords)
-            if distance < (Config.InteractDistance * 4) and (not closestAirdrop or distance < closestAirdrop.distance) then
-                closestAirdrop = {id = k, distance = distance}
+        if not CurrentAirdropContainer and not IsPauseMenuActive() then
+            for k,v in pairs(LocalAirdrops) do 
+                for containerId, container in pairs(v.containers) do
+                    if container.coords then
+                        local distance = #(playerCoords - container.coords)
+                        if distance < (Config.InteractDistance * 4) and (not closestAirdrop or distance < closestAirdrop.distance) then
+                            closestAirdrop = {id = k, containerId = containerId, distance = distance}
+                        end
+                    end
+                end
             end
         end
         if closestAirdrop then
             wait = 0
             local airdrop = LocalAirdrops[closestAirdrop.id]
-            local coords = airdrop.coords + vector3(0.0, 0.0, 1.0)
+            local airdropContainer = airdrop.containers[closestAirdrop.containerId]
+            local coords = airdropContainer.coords + vector3(0.0, 0.0, 1.0)
             local playerPed = PlayerPedId()
             local renderDistance = 5.0
             local distance = #(GetEntityCoords(playerPed) - coords)
@@ -253,11 +324,15 @@ CreateThread(function()
                     container = {
                         position = { x = screenX, y = screenY },
                         scale = scale,
-                        image = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNVTHQLETxbGkAi69ERatzLAjw24-gM4ERfQ&s",
-                        label = "Airdrop Container",
+                        unlockTime = airdropContainer.unlockTime,
+                        image = airdropContainer.image,
+                        label = airdropContainer.label,
                         description = "Loot the airdrop container",
                     },
                 })
+                if airdropContainer.unlockTime <= 0 and scale >= 1.0 and IsControlJustPressed(1, 51) then
+                    AirdropInteraction(renderingAirdrop.id, renderingAirdrop.containerId)
+                end
             elseif renderingAirdrop then
                 renderingAirdrop = nil
                 SendNUIMessage({
@@ -296,12 +371,12 @@ RegisterNUICallback("exitInterface", function(data, cb)
 end)
 
 RegisterNUICallback("updateAirdropContainerItemStatus", function(data, cb)
-    TriggerServerEvent("pickle_airdrops:updateAirdropContainerItemStatus", CurrentAirdropContainer.id, data.slot, data.status)
+    TriggerServerEvent("pickle_airdrops:updateAirdropContainerItemStatus", CurrentAirdropContainer.id, CurrentAirdropContainer.containerId, data.slot, data.status)
     cb("ok")
 end)
 
 RegisterNUICallback("takeAirdropContainerItem", function(data, cb)
-    TriggerServerEvent("pickle_airdrops:takeAirdropContainerItem", CurrentAirdropContainer.id, data.slot)
+    TriggerServerEvent("pickle_airdrops:takeAirdropContainerItem",  CurrentAirdropContainer.id, CurrentAirdropContainer.containerId, data.slot)
     cb("ok")
 end)
 
@@ -318,15 +393,49 @@ RegisterNetEvent("pickle_airdrops:removeAirdrop", function(id)
     end
 end)
 
-RegisterNetEvent("pickle_airdrops:updateAirdropContainerItems", function(id, items)
+RegisterNetEvent("pickle_airdrops:startContainerTimer", function(id, timerStarted)
     if not LocalAirdrops[id] then return end
-    LocalAirdrops[id].items = items
-    if CurrentAirdropContainer and CurrentAirdropContainer.id == id then
+    local airdrop = LocalAirdrops[id]
+    for containerId, container in pairs(airdrop.containers) do
+        container.timerStarted = timerStarted
+    end
+end)
+
+RegisterNetEvent("pickle_airdrops:removeAirdropContainer", function(id, containerId)
+    if CurrentAirdropContainer and CurrentAirdropContainer.id == id and CurrentAirdropContainer.containerId == containerId then
+        ExitAirdropContainer()
+    end
+    RemoveAirdropContainer(id, containerId)
+end)
+
+RegisterNetEvent("pickle_airdrops:updateAirdropContainerItems", function(id, containerId, items)
+    if not LocalAirdrops[id] or not LocalAirdrops[id].containers[containerId] then return end
+    LocalAirdrops[id].containers[containerId].items = items
+    if CurrentAirdropContainer and CurrentAirdropContainer.id == id and CurrentAirdropContainer.containerId == containerId then
         SendNUIMessage({
             type = "updateAirdropContainerItems",
             items = items,
         })
     end
+end)
+
+RegisterNetEvent("pickle_airdrops:playAirdropPlacement", function()
+    local playerPed = PlayerPedId()
+    local playerCoords = GetEntityCoords(playerPed)
+    local forwardVector = GetEntityForwardVector(playerPed)
+    local flareCoords = playerCoords + forwardVector * 0.5
+    local flareObj = CreateProp(`prop_flare_01b`, flareCoords.x, flareCoords.y, flareCoords.z, false, false, false)
+    PlayAnim(playerPed, "random@domestic", "pickup_low", -8.0, 8.0, -1, 1, 1.0)
+    AttachEntityToEntity(flareObj, playerPed, GetPedBoneIndex(playerPed, 0xDEAD), 0.125, 0.0, 0.0, 90.0, 90.0, 0.0, false, false, false, false, 2, true)
+    SetTimeout(600, function()
+        local _, groundZ = GetGroundZExcludingObjectsFor_3dCoord(flareCoords.x, flareCoords.y, flareCoords.z + 1000.0, 0.0, false)
+        DeleteEntity(flareObj)
+        RequestWeaponAsset(`weapon_flare`) 
+        while not HasWeaponAssetLoaded(`weapon_flare`) do Wait(0) end
+        ShootSingleBulletBetweenCoords(flareCoords.x, flareCoords.y, groundZ, flareCoords.x, flareCoords.y, groundZ - 0.001, 0, false, `weapon_flare`, 0, true, true, -1.0)
+    end)
+    Wait(1500)
+    ClearPedTasks(playerPed)
 end)
 
 AddEventHandler("onResourceStart", function(resourceName)
