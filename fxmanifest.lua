@@ -1,8 +1,8 @@
 fx_version "cerulean"
 game "gta5"
 author "Pickle Mods"
-description "The best system for in-game monetization using Tebex."
-version "v1.1.3"
+description "The best system for airdrops in FiveM."
+version "v0.1.0"
 
 ui_page "nui/index.html"
 

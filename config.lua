@@ -23,7 +23,7 @@ Config.RandomDropCommand = "airdrop" -- Command to spawn a random drop. /airdrop
 Config.RandomDropZones = {
     -- Radius will affect the randomization of the drop zone around the coordinates. Set to 0.0 to set the drop zone to the exact coordinates.
     { coords = vector3(-1666.8334, -899.7947, 7.4796), radius = 50.0 },
-    { coords = vector3(-1138.2551, -2.0392, 47.9821), radius = 50.3030 },
+    { coords = vector3(-1138.2551, -2.0392, 47.9821), radius = 50.0 },
     { coords = vector3(1369.0424, -649.6426, 72.5967), radius = 50.0 },
 }
 
