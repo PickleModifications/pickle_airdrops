@@ -1,5 +1,4 @@
 local LocalAirdrops = {}
-local skyHeight = 500.0
 local CurrentAirdropContainer = nil
 
 function SetEntityScale(entity, scale)
@@ -67,9 +66,9 @@ function CreateLocalAirdrop(id, data)
     local dropModel = data.dropModel
     local parachuteModel = data.parachuteModel
     local dropType = "object"
-    local planeSpeed = 2.0
-    local dropSpeed = 0.2
-    
+    local planeSpeed = Config.Airdrops.planeSpeed
+    local dropSpeed = Config.Airdrops.dropSpeed
+    local skyHeight = Config.Airdrops.skyHeight
     LocalAirdrops[id].planeObject = CreateProp(`prop_tennis_ball`, data.coords.x, data.coords.y, data.coords.z + skyHeight, false, false, false)
     SetEntityHeading(LocalAirdrops[id].planeObject, data.heading)
     local forwardVector = GetEntityForwardVector(LocalAirdrops[id].planeObject)
@@ -357,6 +356,8 @@ RegisterNUICallback("pageLoaded", function(data, cb)
         type = "setConfig",
         config = {
             locale = Language[Config.Language],
+            currency = Config.Currency.currency,
+            countryCode = Config.Currency.countryCode,
             items = Inventory.Items,
             imageDirectory = Config.ImageDirectory,
         }

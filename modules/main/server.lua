@@ -245,23 +245,51 @@ CreateThread(function()
             end)
             TriggerClientEvent("pickle_airdrops:playAirdropPlacement", source)
         end)
-        lib.cron.new(v.cronSchedule, function()
-            local dropTemplate = Config.AirdropTemplates[k]
-            local containers = dropTemplate.containers or 1
-            if containers < 1 then
-                containers = 1
+        if v.cronSchedule then 
+            lib.cron.new(v.cronSchedule, function()
+                local dropTemplate = Config.AirdropTemplates[k]
+                local containers = dropTemplate.containers or 1
+                if containers < 1 then
+                    containers = 1
+                end
+                local location = Config.RandomDropZones[math.random(1, #Config.RandomDropZones)]
+                local coords = GetRandomPointInCircle(location.coords, location.radius)
+                local heading = location.heading or math.random(0, 360)
+                StartAirdropTemplate(k, {
+                    coords = coords,
+                    heading = heading,
+                    containers = containers,
+                })
+                if Config.Airdrops.announceScheduledDrops then
+                    ShowNotification(-1, _L("airdrop_incoming_announce", dropTemplate.label))
+                end
+            end)
+        end
+    end
+    if Config.RandomDrops.cronSchedule then 
+        lib.cron.new(Config.RandomDrops.cronSchedule, function()
+            local templateStack = {}
+            for i=1, #Config.RandomDrops.airdropTemplates do 
+                local template = Config.RandomDrops.airdropTemplates[i]
+                for j=1, template.chance do 
+                    table.insert(templateStack, template)
+                end
             end
+            local templateIndex = math.random(1, #templateStack)
+            local templateId = templateStack[templateIndex].id
+            local containers = templateStack[templateIndex].containers or 1
+            local dropTemplate = Config.AirdropTemplates[templateId]
             local location = Config.RandomDropZones[math.random(1, #Config.RandomDropZones)]
             local coords = GetRandomPointInCircle(location.coords, location.radius)
             local heading = location.heading or math.random(0, 360)
-            StartAirdropTemplate(k, {
+            if Config.RandomDrops.announceScheduledDrops then
+                ShowNotification(-1, _L("airdrop_incoming_announce", dropTemplate.label))
+            end
+            StartAirdropTemplate(templateId, {
                 coords = coords,
                 heading = heading,
                 containers = containers,
             })
-            if Config.Airdrops.announceScheduledDrops then
-                ShowNotification(-1, _L("airdrop_incoming_announce", dropTemplate.label))
-            end
         end)
     end
 end)

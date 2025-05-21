@@ -7,9 +7,17 @@ Config.UseTarget = true -- This enables the use of the target system when availa
 Config.ImageDirectory = "nui://ox_inventory/web/images/"
 Config.WeaponsAreItems = true -- This enables the use of weapons as items. If set to false, weapons will be treated as items and not as weapons.
 Config.Airdrops = {
+    planeSpeed = 2.0, -- Speed of the plane.
+    dropSpeed = 0.5, -- Speed of the airdrop package.
+    skyHeight = 200.0, -- Height of the plane in the sky.
     announceScheduledDrops = true, -- This enables the announcement of scheduled drops.
     defaultUnlockTime = 0, -- Default time in seconds to unlock the airdrop container.
     defaultItemCaptureTime = 5, -- Default time to capture an item from the airdrop.
+}
+
+Config.Currency = {
+    currency = "USD",
+    countryCode = "en-US",
 }
 
 Config.CurrencyItems = {
@@ -36,7 +44,7 @@ Config.AirdropTemplates = {
     ["default"] = {
         image =  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNVTHQLETxbGkAi69ERatzLAjw24-gM4ERfQ&s", -- Image of the airdrop shown on the interact.
         label = "Airdrop Container - Basic", -- Label of the airdrop.
-        cronSchedule = "0 */1 * * *", -- Cron job to spawn the airdrop. This is in the format of "minute hour day month dayOfWeek". Example: "0 0/5 * * * ?" will spawn every 5 minutes.
+        -- cronSchedule = "0 */1 * * *", -- Cron job to spawn the airdrop. This is in the format of "minute hour day month dayOfWeek". Example: "0 0/5 * * * ?" will spawn every 5 minutes.
         item = "airdrop_basic", -- This is the item that will be used by players to spawn the airdrop at their position.
         radius = 50.0, --- The radius of the airdrop drop zone.
         spawnRadiusMultiplier = 0.5, -- 1.0 is to spawn objects to the fullest extent, 0.1 is to spawn objects in a small area in the center.
@@ -57,6 +65,14 @@ Config.AirdropTemplates = {
         },
         itemRange = {2, 3}, -- The range of items that can be spawned in the airdrop container.
     },
+}
+
+Config.RandomDrops = {
+    announceScheduledDrops = true, -- This enables the announcement of scheduled drops.
+    cronSchedule = "0 */1 * * *", -- Cron job to spawn the airdrop. Set to nil to disable.
+    airdropTemplates = {
+        {id = "default", chance = 10, containers = 1}, -- This is the default airdrop template. The chance is the chance of the airdrop spawning.
+    }
 }
 
 Config.Blips = {
