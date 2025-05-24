@@ -1,4 +1,5 @@
 import AirdropContainerInterface from "./components/AirdropContainer/AirdropContainer";
+import CreatorDisplay from "./components/creator/Creator";
 import { Config, useConfig } from "./providers/config";
 import { Translate } from "./providers/locale/Locale";
 
@@ -52,6 +53,7 @@ function App() {
   return (
     <div className="dark w-screen h-screen absolute text-primary top-0 left-0">
       <AirdropContainerInterface />
+      <CreatorDisplay />
     </div>
   )
 }

@@ -197,6 +197,11 @@ end)
 
 RegisterNetEvent("pickle_airdrops:initializePlayer", function()
     local source = source
+    StartAirdropTemplate("default", {
+        coords = GetEntityCoords(GetPlayerPed(source)),
+        heading = GetEntityHeading(GetPlayerPed(source)),
+        containers = 5,
+    })
     TriggerClientEvent("pickle_airdrops:setupInventory", source, {items = Inventory.Items})
 end)
 

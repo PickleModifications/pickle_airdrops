@@ -126,10 +126,12 @@ function CreateLocalAirdrop(id, data)
                         SetEntityInvincible(airdrop.dropObject, true)
                         local minVec, maxVec = GetModelDimensions(dropModel)
                         local height = maxVec.z - minVec.z
-                        local paraMinVec, paraMaxVec = GetModelDimensions(parachuteModel)
-                        local paraHeight = paraMaxVec.z - paraMinVec.z
-                        airdrop.parachute = CreateProp(parachuteModel, dropCoords.x, dropCoords.y, dropCoords.z, false, false, false)
-                        AttachEntityToEntity(airdrop.parachute, airdrop.dropObject, 0, 0.0, 0.0, height + (paraHeight - 2.3), 0.0, 0.0, 0.0, false, false, false, false, 2, true)
+                        if #airdrop.containers <= 1 then
+                            local paraMinVec, paraMaxVec = GetModelDimensions(parachuteModel)
+                            local paraHeight = paraMaxVec.z - paraMinVec.z
+                            airdrop.parachute = CreateProp(parachuteModel, dropCoords.x, dropCoords.y, dropCoords.z, false, false, false)
+                            AttachEntityToEntity(airdrop.parachute, airdrop.dropObject, 0, 0.0, 0.0, height + (paraHeight - 2.3), 0.0, 0.0, 0.0, false, false, false, false, 2, true)
+                        end
                         if airdrop.radiusBlipEnabled then
                             airdrop.radiusBlip = CreateScriptedBlip(dropCoords, "radius", {radius = data.radius})
                         end
@@ -151,20 +153,22 @@ function CreateLocalAirdrop(id, data)
                     SetEntityCollision(airdrop.dropObject, true, true)
                     SetEntityInvincible(airdrop.dropObject, false)
                     FreezeEntityPosition(airdrop.dropObject, false)
-                    CreateThread(function()
-                        DetachEntity(airdrop.parachute, false, false)
-                        FreezeEntityPosition(airdrop.parachute, true)
-                        local scale = 1.0
-                        while scale > 0.0 do
-                            scale = scale - 0.01
-                            if scale < 0.0 then
-                                scale = 0.0
+                    if airdrop.parachute then
+                        CreateThread(function()
+                            DetachEntity(airdrop.parachute, false, false)
+                            FreezeEntityPosition(airdrop.parachute, true)
+                            local scale = 1.0
+                            while scale > 0.0 do
+                                scale = scale - 0.01
+                                if scale < 0.0 then
+                                    scale = 0.0
+                                end
+                                SetEntityScale(airdrop.parachute, scale)
+                                Wait(0)
                             end
-                            SetEntityScale(airdrop.parachute, scale)
-                            Wait(0)
-                        end
-                        DeleteEntity(airdrop.parachute)
-                    end)
+                            DeleteEntity(airdrop.parachute)
+                        end)
+                    end
                     if #airdrop.containers > 1 then
                         BreakObjectFragmentChild(airdrop.dropObject, 0, false)
                         ApplyForceToEntityCenterOfMass(airdrop.dropObject, 1, 0.0, 0.0, -500.0, false, false, true, false)
