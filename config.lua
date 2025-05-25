@@ -6,6 +6,12 @@ Config.InteractDistance = 2.0
 Config.UseTarget = true -- This enables the use of the target system when available.
 Config.ImageDirectory = "nui://ox_inventory/web/images/"
 Config.WeaponsAreItems = true -- This enables the use of weapons as items. If set to false, weapons will be treated as items and not as weapons.
+Config.RandomDropCommand = "airdrop" -- Command to spawn a random drop. /airdrop <dropTemplate>
+
+Config.GiveKeys = function(vehicle, plate)
+    -- Replace this line with your export / event to give keys for your vehicle.
+end
+
 Config.Airdrops = {
     planeSpeed = 2.0, -- Speed of the plane.
     dropSpeed = 0.5, -- Speed of the airdrop package.
@@ -26,8 +32,6 @@ Config.CurrencyItems = {
     ["dirty_money"] = "black_money",
 }
 
-Config.RandomDropCommand = "airdrop" -- Command to spawn a random drop. /airdrop <dropTemplate>
-
 Config.RandomDropZones = {
     -- Radius will affect the randomization of the drop zone around the coordinates. Set to 0.0 to set the drop zone to the exact coordinates.
     { coords = vector3(-1666.8334, -899.7947, 7.4796), radius = 50.0 },
@@ -42,7 +46,7 @@ Config.RadiusBlip = {
 
 Config.AirdropTemplates = {
     ["default"] = {
-        image =  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNVTHQLETxbGkAi69ERatzLAjw24-gM4ERfQ&s", -- Image of the airdrop shown on the interact.
+        image =  "nui://pickle_airdrops/nui/images/crate.png", -- Image of the airdrop shown on the interact.
         label = "Airdrop Container - Basic", -- Label of the airdrop.
         -- cronSchedule = "0 */1 * * *", -- Cron job to spawn the airdrop. This is in the format of "minute hour day month dayOfWeek". Example: "0 0/5 * * * ?" will spawn every 5 minutes.
         item = "airdrop_basic", -- This is the item that will be used by players to spawn the airdrop at their position.
@@ -65,6 +69,24 @@ Config.AirdropTemplates = {
         },
         itemRange = {2, 3}, -- The range of items that can be spawned in the airdrop container.
     },
+    ["vehicle_default"] = {
+        image =  "nui://pickle_airdrops/nui/images/crate.png", -- Image of the airdrop shown on the interact.
+        label = "Mystery Vehicle - Basic", -- Label of the airdrop.
+        -- cronSchedule = "0 */1 * * *", -- Cron job to spawn the airdrop. This is in the format of "minute hour day month dayOfWeek". Example: "0 0/5 * * * ?" will spawn every 5 minutes.
+        dropType = "vehicle", -- This is the type of the airdrop. It can be "vehicle" or "container". If set to "vehicle", the airdrop will spawn a vehicle.
+        item = "vehicledrop_basic", -- This is the item that will be used by players to spawn the airdrop at their position.
+        radius = 50.0, --- The radius of the airdrop drop zone.
+        spawnRadiusMultiplier = 0.5, -- 1.0 is to spawn objects to the fullest extent, 0.1 is to spawn objects in a small area in the center.
+        dropBlipEnabled = true, -- This enables the drop blip on the map.
+        radiusBlipEnabled = true, -- This enables the radius blip on the map.
+        vehicles = { 
+            -- If an item's capture time is not specified, it will use the default capture time in Config.Airdrops.
+            -- The higher an item's chance, the more likely it is to spawn in the airdrop container. 
+            {chance = 2, label = "Adder", model = "adder", captureTime = 60, image = "https://docs.fivem.net/vehicles/adder.webp"},
+            {chance = 10, label = "Dominator", model = "dominator", image = "https://docs.fivem.net/vehicles/dominator.webp"},
+            {chance = 15, label = "Sanchez", model = "sanchez", image = "https://docs.fivem.net/vehicles/sanchez.webp"},
+        },
+    },
 }
 
 Config.RandomDrops = {
@@ -72,6 +94,7 @@ Config.RandomDrops = {
     cronSchedule = "0 */1 * * *", -- Cron job to spawn the airdrop. Set to nil to disable.
     airdropTemplates = {
         {id = "default", chance = 10, containers = 1}, -- This is the default airdrop template. The chance is the chance of the airdrop spawning.
+        {id = "vehicle_default", chance = 10}, -- This is the default airdrop template. The chance is the chance of the airdrop spawning.
     }
 }
 

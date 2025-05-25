@@ -17,10 +17,28 @@ function InitializeAirdrop(data)
     local unlockTime = data.unlockTime or Config.Airdrops.defaultUnlockTime
     for i=1, #data.containers do 
         local container = data.containers[i]
+        if container.vehicle then
+            container.label = container.vehicle.label or "ERR_NO_LABEL"
+            container.image = container.vehicle.image or "https://example.com/default_vehicle_image.png"
+            container.description = container.vehicle.description or _L("airdrop_vehicle_display_desc")
+            data.dropModel = container.vehicle.model
+            container.items = {
+                {
+                    label = container.vehicle.label or "ERR_NO_LABEL",
+                    name = container.vehicle.label or "ERR_NO_LABEL",
+                    image = container.vehicle.image or "https://example.com/default_vehicle_image.png",
+                    model = container.vehicle.model,
+                    itemType = "vehicle",
+                    count = 1,
+                    captureTime = container.vehicle.captureTime or Config.Airdrops.defaultItemCaptureTime,
+                }
+            }
+        end
         table.insert(airdropContainers, {
             id = i,
             image = container.image or "",
             label = container.label or _L("airdrop_container"),
+            description = container.description or _L("airdrop_container_display_desc"),
             location = {
                 coords = #data.containers == 1 and data.coords or GetRandomPointInCircle(data.coords, radius * spawnRadiusMultiplier),
                 heading = #data.containers == 1 and data.heading or math.random(0, 360),
@@ -28,16 +46,19 @@ function InitializeAirdrop(data)
             timerStarted = nil,
             unlockTime = unlockTime,
             lootingPlayers = {},
+            vehicle = container.vehicle or nil,
             dropModel = container.dropModel,
             items = container.items,
             maxSlots = #container.items,
         })
+        if container.vehicle then break end
     end
     Airdrops[id] = {
         id = id,
         radius = radius,
         coords = data.coords,
         heading = data.heading,
+        dropType = data.dropType or "object",
         dropBlipEnabled = data.dropBlipEnabled,
         radiusBlipEnabled = data.radiusBlipEnabled,
         dropModel = data.dropModel or `sm_prop_smug_crate_01a`,
@@ -71,45 +92,63 @@ function StartAirdropTemplate(templateId, data)
         return
     end
     local containers = {}
-    for i=1, data.containers or 1 do 
-        local itemRange = GenerateRange(templateCfg.itemRange)
-        local items = {}
-        local itemStack = {}
-        for i=1, #templateCfg.items do 
-            local item = templateCfg.items[i]
-            for j=1, item.chance do 
-                table.insert(itemStack, i)
+    if templateCfg.dropType and templateCfg.dropType == "vehicle" then
+        local vehicleStack = {}
+        for i=1, #templateCfg.vehicles do 
+            local vehicle = templateCfg.vehicles[i]
+            for j=1, vehicle.chance do 
+                table.insert(vehicleStack, i)
             end
         end
-        for i=1, itemRange do 
-            local itemIndex = itemStack[math.random(1, #itemStack)]
-            local item = templateCfg.items[itemIndex]
-            local itemCount = GenerateRange(item.range)
-            table.insert(items, {
-                name = item.name or Config.CurrencyItems[item.itemType],
-                itemType = item.itemType or "item",
-                count = itemCount,
-                captureTime = item.captureTime or Config.Airdrops.defaultItemCaptureTime,
-            })
-            local newItemStack = {}
-            for i=1, #itemStack do 
-                if itemStack[i] ~= itemIndex then
-                    table.insert(newItemStack, itemStack[i])
+        local vehicleIndex = vehicleStack[math.random(1, #vehicleStack)]
+        local vehicle = templateCfg.vehicles[vehicleIndex]
+        if not vehicle then
+            print("^1ERROR:^0 Invalid vehicle template: ", templateId, vehicleIndex)
+            return
+        end
+        containers[1] = { vehicle = vehicle }
+    else
+        for i=1, data.containers or 1 do 
+            local itemRange = GenerateRange(templateCfg.itemRange)
+            local items = {}
+            local itemStack = {}
+            for i=1, #templateCfg.items do 
+                local item = templateCfg.items[i]
+                for j=1, item.chance do 
+                    table.insert(itemStack, i)
                 end
             end
-            itemStack = newItemStack
+            for i=1, itemRange do 
+                local itemIndex = itemStack[math.random(1, #itemStack)]
+                local item = templateCfg.items[itemIndex]
+                local itemCount = GenerateRange(item.range)
+                table.insert(items, {
+                    name = item.name or Config.CurrencyItems[item.itemType],
+                    itemType = item.itemType or "item",
+                    count = itemCount,
+                    captureTime = item.captureTime or Config.Airdrops.defaultItemCaptureTime,
+                })
+                local newItemStack = {}
+                for i=1, #itemStack do 
+                    if itemStack[i] ~= itemIndex then
+                        table.insert(newItemStack, itemStack[i])
+                    end
+                end
+                itemStack = newItemStack
+            end
+            table.insert(containers, {
+                image = templateCfg.image,
+                label = templateCfg.label,
+                dropModel = templateCfg.minidropModel,
+                items = items,
+            })
         end
-        table.insert(containers, {
-            image = templateCfg.image,
-            label = templateCfg.label,
-            dropModel = templateCfg.minidropModel,
-            items = items,
-        })
     end
 
     InitializeAirdrop({
         coords = data.coords,
         heading = data.heading,
+        dropType = templateCfg.dropType or "object",
         dropBlipEnabled = templateCfg.dropBlipEnabled,
         spawnRadiusMultiplier = templateCfg.spawnRadiusMultiplier,
         radiusBlipEnabled = templateCfg.radiusBlipEnabled,
@@ -141,44 +180,64 @@ RegisterNetEvent("pickle_airdrops:takeAirdropContainerItem", function(id, contai
     if not airdrop then return end
     local airdropContainer = airdrop.containers[containerId]
     if not airdropContainer then return end
-    local item = airdropContainer.items[slot]
-    if not item then return end
-    local lootingPlayer = airdropContainer.lootingPlayers[source]
-    if not lootingPlayer or lootingPlayer.slot ~= slot or currentTime - lootingPlayer.statusTime < (item.captureTime - 2) then
-        ShowNotification(source, "nice try bud, get banned")
-        return
-    end
-    if item.itemType == "money" or item.itemType == "dirty_money" then
-        AddMoney(source, item.count, item.itemType == "money" and "money" or "dirty")
-    elseif item.itemType == "weapon" then
-        Inventory.AddWeapon(source, item.name, item.count)
+    if airdropContainer.vehicle then
+        if not ConfigSV.AddOwnedVehicle then 
+            print("^1ERROR:^0 ConfigSV.AddOwnedVehicle is not set, cannot take vehicle from airdrop container.")
+            return
+        end
+        if not airdropContainer.items[slot] then return end
+        local item = airdropContainer.items[slot]
+        if not item then
+            ShowNotification(source, _L("invalid_item"))
+            return
+        end
+        local plate = ConfigSV.AddOwnedVehicle(source, item.model)
+        Airdrops[id] = nil
+        TriggerClientEvent("pickle_airdrops:removeAirdrop", -1, id)
+        TriggerClientEvent("pickle_airdrops:replicateVehicle", source, {coords = airdrop.coords, heading = airdrop.heading, model = item.model, plate = plate})
+        if ConfigSV.GiveKeys then
+            ConfigSV.GiveKeys(source, plate)
+        end
     else
-        Inventory.AddItem(source, item.name, item.count)
-    end
-    airdropContainer.items[slot] = nil
-    local remainingItems = 0
-    for index, item in pairs(airdropContainer.items) do
-        if item then
-            remainingItems = remainingItems + 1
+        local item = airdropContainer.items[slot]
+        if not item then return end
+        local lootingPlayer = airdropContainer.lootingPlayers[source]
+        if not lootingPlayer or lootingPlayer.slot ~= slot or currentTime - lootingPlayer.statusTime < (item.captureTime - 2) then
+            ShowNotification(source, "nice try bud, get banned")
+            return
         end
-    end
-    TriggerClientEvent("pickle_airdrops:updateAirdropContainerItems", -1, id, containerId, airdropContainer.items)
-    if remainingItems == 0 then
-        Airdrops[id].containers[containerId] = nil
-        local remainingContainers = 0
-        for _, container in pairs(Airdrops[id].containers) do
-            if container then
-                remainingContainers = remainingContainers + 1
+        if item.itemType == "money" or item.itemType == "dirty_money" then
+            AddMoney(source, item.count, item.itemType == "money" and "money" or "dirty")
+        elseif item.itemType == "weapon" then
+            Inventory.AddWeapon(source, item.name, item.count)
+        else
+            Inventory.AddItem(source, item.name, item.count)
+        end
+        airdropContainer.items[slot] = nil
+        local remainingItems = 0
+        for index, item in pairs(airdropContainer.items) do
+            if item then
+                remainingItems = remainingItems + 1
             end
         end
-        SetTimeout(1000, function()
-            if remainingContainers == 0 then
-                Airdrops[id] = nil
-                TriggerClientEvent("pickle_airdrops:removeAirdrop", -1, id)
-            else
-                TriggerClientEvent("pickle_airdrops:removeAirdropContainer", -1, id, containerId)
+        TriggerClientEvent("pickle_airdrops:updateAirdropContainerItems", -1, id, containerId, airdropContainer.items)
+        if remainingItems == 0 then
+            Airdrops[id].containers[containerId] = nil
+            local remainingContainers = 0
+            for _, container in pairs(Airdrops[id].containers) do
+                if container then
+                    remainingContainers = remainingContainers + 1
+                end
             end
-        end)
+            SetTimeout(1000, function()
+                if remainingContainers == 0 then
+                    Airdrops[id] = nil
+                    TriggerClientEvent("pickle_airdrops:removeAirdrop", -1, id)
+                else
+                    TriggerClientEvent("pickle_airdrops:removeAirdropContainer", -1, id, containerId)
+                end
+            end)
+        end
     end
 end)
 
@@ -197,12 +256,23 @@ end)
 
 RegisterNetEvent("pickle_airdrops:initializePlayer", function()
     local source = source
-    StartAirdropTemplate("default", {
-        coords = GetEntityCoords(GetPlayerPed(source)),
-        heading = GetEntityHeading(GetPlayerPed(source)),
-        containers = 5,
-    })
+    -- StartAirdropTemplate("default", {
+    --     coords = GetEntityCoords(GetPlayerPed(source)),
+    --     heading = GetEntityHeading(GetPlayerPed(source)),
+    --     containers = 5,
+    -- })
     TriggerClientEvent("pickle_airdrops:setupInventory", source, {items = Inventory.Items})
+end)
+
+RegisterNetEvent("pickle_airdrops:exitAirdropContainer", function(id, containerId)
+    local source = source
+    local airdrop = Airdrops[id]
+    if not airdrop then return end
+    local airdropContainer = airdrop.containers[containerId]
+    if not airdropContainer then return end
+    if airdropContainer.lootingPlayers[source] then
+        airdropContainer.lootingPlayers[source] = nil
+    end
 end)
 
 RegisterCommand(Config.RandomDropCommand, function(source, args, rawCommand)

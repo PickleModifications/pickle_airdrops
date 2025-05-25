@@ -8,6 +8,8 @@ import { useEffect, useRef, useState } from "react";
 import classes from "./AirdropContainer.module.css";
 
 export type Item = {
+    label?: string;
+    image?: string;
     name: string;
     count: number;
 }
@@ -111,13 +113,24 @@ function AirdropContainer({ containerInfo }: { containerInfo: AirdropContainerIn
                                     )}
                                 </div>
                             </div>
-                            <img src={GetItemImage(item.name)} alt={""} className="w-14 h-14" draggable={false} onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = "none"; // hides the image
-                            }} />
+                            {item.image ? (
+                                <img src={item.image} alt={""} className="p-[10px] max-h-14" draggable={false} onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = "none"; // hides the image
+                                }} />  
+                            ) : (
+                                <img src={GetItemImage(item.name)} alt={""} className="w-14 h-14" draggable={false} onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = "none"; // hides the image
+                                }} />                            
+                            )}
                             <div className="w-full z-10 px-[4px] py-[2px] bg-background/50">
                                 <div className="font-semibold text-xs text-center truncate">
-                                    <GetItemLabel item={(item.name || item.itemType) as string} />
+                                    {item.label ? (
+                                        item.label
+                                    ) : (
+                                        <GetItemLabel item={(item.name || item.itemType) as string} />
+                                    )}
                                 </div>
                             </div>
                             {(captureInfo && captureInfo.slot == index) && (

@@ -57,6 +57,7 @@ function CreateLocalAirdrop(id, data)
     LocalAirdrops[id] = {
         id = id,
         radius = data.radius,
+        dropType = data.dropType,
         radiusBlipEnabled = data.radiusBlipEnabled,
         dropBlipEnabled = data.dropBlipEnabled,
         coords = data.coords,
@@ -65,14 +66,14 @@ function CreateLocalAirdrop(id, data)
     }
     local dropModel = data.dropModel
     local parachuteModel = data.parachuteModel
-    local dropType = "object"
+    local dropType = LocalAirdrops[id].dropType
     local planeSpeed = Config.Airdrops.planeSpeed
     local dropSpeed = Config.Airdrops.dropSpeed
     local skyHeight = Config.Airdrops.skyHeight
     LocalAirdrops[id].planeObject = CreateProp(`prop_tennis_ball`, data.coords.x, data.coords.y, data.coords.z + skyHeight, false, false, false)
     SetEntityHeading(LocalAirdrops[id].planeObject, data.heading)
     local forwardVector = GetEntityForwardVector(LocalAirdrops[id].planeObject)
-    local planeCoords = vector3(data.coords.x, data.coords.y, data.coords.z + skyHeight) + forwardVector * -(planeSpeed * 1000)
+    local planeCoords = vector3(data.coords.x, data.coords.y, data.coords.z + skyHeight) --+ forwardVector * -(planeSpeed * 1000)
     local planeDespawnCoords = vector3(data.coords.x, data.coords.y, data.coords.z + skyHeight) + forwardVector * (planeSpeed * 1000)
     local dropCoords = vector3(data.coords.x, data.coords.y, data.coords.z + skyHeight - 10.0)
     LocalAirdrops[id].plane = CreateVeh(`jet`, planeCoords.x, planeCoords.y, planeCoords.z, 0.0, false, false)
@@ -117,7 +118,7 @@ function CreateLocalAirdrop(id, data)
                     local plane2d = vector3(planeCoords.x, planeCoords.y, 0.0)
                     if #(target2d - plane2d) < 10.0 then
                         if (dropType == "vehicle") then
-                            airdrop.dropObject = CreateVeh(dropModel, dropCoords.x, dropCoords.y, dropCoords.z, data.heading, false, false)
+                            airdrop.dropObject = CreateVeh(GetHashKey(dropModel), dropCoords.x, dropCoords.y, dropCoords.z, data.heading, false, false)
                         else
                             airdrop.dropObject = CreateProp(dropModel, dropCoords.x, dropCoords.y, dropCoords.z, false, false, false)
                         end
@@ -183,7 +184,13 @@ function CreateLocalAirdrop(id, data)
                         local _, groundZ = GetGroundZExcludingObjectsFor_3dCoord(container.location.coords.x, container.location.coords.y, container.location.coords.z + 1000.0, 0.0, false)
                         container.coords = vector3(container.location.coords.x, container.location.coords.y, groundZ)
                         container.heading = container.location.heading
-                        container.dropObject = CreateProp(container.dropModel, container.coords.x, container.coords.y, container.coords.z, false, false, false)
+                        if dropType == "vehicle" then
+                            container.dropObject = CreateVeh(GetHashKey(dropModel), container.coords.x, container.coords.y, container.coords.z, container.heading, false, false)
+                            SetVehicleOnGroundProperly(container.dropObject)
+                            SetVehicleDoorsLocked(container.dropObject, 2) -- Lock the vehicle doors
+                        else
+                            container.dropObject = CreateProp(container.dropModel, container.coords.x, container.coords.y, container.coords.z, false, false, false)
+                        end
                         SetEntityHeading(container.dropObject, container.heading)
                         FreezeEntityPosition(container.dropObject, true)
                         SetEntityInvincible(container.dropObject, true)
@@ -277,6 +284,7 @@ end
 
 function ExitAirdropContainer()
     if not CurrentAirdropContainer then return end
+    TriggerServerEvent("pickle_airdrops:exitAirdropContainer", CurrentAirdropContainer.id, CurrentAirdropContainer.containerId)
     SetNuiFocus(false, false)
     TransitionFromBlurred(250)
     SendNUIMessage({
@@ -330,7 +338,7 @@ CreateThread(function()
                         unlockTime = airdropContainer.unlockTime,
                         image = airdropContainer.image,
                         label = airdropContainer.label,
-                        description = "Loot the airdrop container",
+                        description = airdropContainer.description,
                     },
                 })
                 if airdropContainer.unlockTime <= 0 and scale >= 1.0 and IsControlJustPressed(1, 51) then
@@ -443,6 +451,17 @@ RegisterNetEvent("pickle_airdrops:playAirdropPlacement", function()
     ClearPedTasks(playerPed)
 end)
 
+RegisterNetEvent("pickle_airdrops:replicateVehicle", function(vehicleData)
+    if not vehicleData or not vehicleData.model or not vehicleData.coords then return end
+    local model = GetHashKey(vehicleData.model)
+    local vehicle = CreateVeh(model, vehicleData.coords.x, vehicleData.coords.y, vehicleData.coords.z, vehicleData.heading or 0.0, true, false)
+    SetVehicleOnGroundProperly(vehicle)
+    SetEntityInvincible(vehicle, true)
+    SetEntityAsMissionEntity(vehicle, true, true)
+    SetVehicleNumberPlateText(vehicle, vehicleData.plate)
+    Config.GiveKeys(vehicle, vehicleData.plate)
+end)
+
 AddEventHandler("onResourceStart", function(resourceName)
     if resourceName == GetCurrentResourceName() then
         Wait(1000)
@@ -459,5 +478,13 @@ AddEventHandler("onResourceStop", function(resourceName)
         for id, airdrop in pairs(LocalAirdrops) do
             DeleteLocalAirdrop(id)
         end
+    end
+end)
+
+AddEventHandler('gameEventTriggered', function(event, args)
+    if event ~= "CEventNetworkEntityDamage" or GetEntityType(args[1]) ~= 1 or NetworkGetPlayerIndexFromPed(args[1]) ~= PlayerId() then return end
+    if not IsEntityDead(PlayerPedId()) then return end
+    if CurrentAirdropContainer then
+        ExitAirdropContainer()
     end
 end)
