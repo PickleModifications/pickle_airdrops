@@ -181,16 +181,19 @@ function CreateLocalAirdrop(id, data)
                     end
                     for containerId, container in pairs(airdrop.containers) do
                         -- get ground z for x & y
-                        local _, groundZ = GetGroundZExcludingObjectsFor_3dCoord(container.location.coords.x, container.location.coords.y, container.location.coords.z + 1000.0, 0.0, false)
+                        local found, groundZ = GetGroundZExcludingObjectsFor_3dCoord(container.location.coords.x, container.location.coords.y, container.location.coords.z + 1000.0, 0.0, false)
+                        if not found then
+                            groundZ = container.location.coords.z
+                        end
                         container.coords = vector3(container.location.coords.x, container.location.coords.y, groundZ)
                         container.heading = container.location.heading
                         if dropType == "vehicle" then
                             container.dropObject = CreateVeh(GetHashKey(dropModel), container.coords.x, container.coords.y, container.coords.z, container.heading, false, false)
-                            SetVehicleOnGroundProperly(container.dropObject)
                             SetVehicleDoorsLocked(container.dropObject, 2) -- Lock the vehicle doors
                         else
                             container.dropObject = CreateProp(container.dropModel, container.coords.x, container.coords.y, container.coords.z, false, false, false)
                         end
+                        container.pendingPlacement = true
                         SetEntityHeading(container.dropObject, container.heading)
                         FreezeEntityPosition(container.dropObject, true)
                         SetEntityInvincible(container.dropObject, true)
@@ -201,6 +204,18 @@ function CreateLocalAirdrop(id, data)
                 end
             elseif landed and not airdrop.planeObject then
                 break
+            else
+                local pedCoords = GetEntityCoords(PlayerPedId())
+                for containerId, container in pairs(airdrop.containers) do
+                    if container.pendingPlacement and #(pedCoords - container.coords) < Config.RenderDistance then
+                        container.pendingPlacement = false
+                        if dropType == "vehicle" then
+                            SetVehicleOnGroundProperly(container.dropObject)
+                        else
+                            PlaceObjectOnGroundProperly(container.dropObject)
+                        end
+                    end
+                end
             end
             Wait(0)
         end

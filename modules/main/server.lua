@@ -134,6 +134,9 @@ function StartAirdropTemplate(templateId, data)
                         table.insert(newItemStack, itemStack[i])
                     end
                 end
+                if #newItemStack == 0 then
+                    newItemStack = itemStack
+                end
                 itemStack = newItemStack
             end
             table.insert(containers, {

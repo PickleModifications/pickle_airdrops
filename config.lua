@@ -70,6 +70,26 @@ Config.AirdropTemplates = {
         },
         itemRange = {2, 3}, -- The range of items that can be spawned in the airdrop container.
     },
+    ["pickle_giveaway"] = {
+        image =  "nui://pickle_airdrops/nui/images/crate.png", -- Image of the airdrop shown on the interact.
+        label = "Pickle Giveaway - Container", -- Label of the airdrop.
+        -- cronSchedule = "0 */1 * * *", -- Cron job to spawn the airdrop. This is in the format of "minute hour day month dayOfWeek". Example: "0 0/5 * * * ?" will spawn every 5 minutes.
+        item = "NONE", -- This is the item that will be used by players to spawn the airdrop at their position.
+        radius = 50.0, --- The radius of the airdrop drop zone.
+        spawnRadiusMultiplier = 0.5, -- 1.0 is to spawn objects to the fullest extent, 0.1 is to spawn objects in a small area in the center.
+        dropBlipEnabled = true, -- This enables the drop blip on the map.
+        radiusBlipEnabled = true, -- This enables the radius blip on the map.
+        dropModel = `gr_prop_gr_crates_rifles_02a`, -- Model of the airdrop container.
+        minidropModel = `gr_prop_gr_crates_rifles_02a`, -- Model of the airdrop containers that appear when the airdrop contains multiple containers.
+        items = { 
+            {chance = 15, name = "water", range = {1, 1} },
+            {chance = 15, name = "water", range = {1, 1} },
+            {chance = 15, name = "water", range = {1, 1} },
+            {chance = 15, name = "water", range = {1, 1} },
+            {chance = 15, name = "water", range = {1, 1} },
+        },
+        itemRange = {5, 5}, -- The range of items that can be spawned in the airdrop container.
+    },
     ["vehicle_default"] = {
         image =  "nui://pickle_airdrops/nui/images/crate.png", -- Image of the airdrop shown on the interact.
         label = "Mystery Vehicle - Basic", -- Label of the airdrop.
