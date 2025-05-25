@@ -73,7 +73,7 @@ function CreateLocalAirdrop(id, data)
     LocalAirdrops[id].planeObject = CreateProp(`prop_tennis_ball`, data.coords.x, data.coords.y, data.coords.z + skyHeight, false, false, false)
     SetEntityHeading(LocalAirdrops[id].planeObject, data.heading)
     local forwardVector = GetEntityForwardVector(LocalAirdrops[id].planeObject)
-    local planeCoords = vector3(data.coords.x, data.coords.y, data.coords.z + skyHeight) --+ forwardVector * -(planeSpeed * 1000)
+    local planeCoords = vector3(data.coords.x, data.coords.y, data.coords.z + skyHeight) + forwardVector * -(planeSpeed * 1000)
     local planeDespawnCoords = vector3(data.coords.x, data.coords.y, data.coords.z + skyHeight) + forwardVector * (planeSpeed * 1000)
     local dropCoords = vector3(data.coords.x, data.coords.y, data.coords.z + skyHeight - 10.0)
     LocalAirdrops[id].plane = CreateVeh(`jet`, planeCoords.x, planeCoords.y, planeCoords.z, 0.0, false, false)
@@ -384,6 +384,20 @@ RegisterNUICallback("exitInterface", function(data, cb)
 end)
 
 RegisterNUICallback("updateAirdropContainerItemStatus", function(data, cb)
+    ClearPedTasks(PlayerPedId())
+    if data.status then
+        local dict = "oddjobs@shop_robbery@rob_till"
+        local anim = "loop"
+        local LocalAirdrops = LocalAirdrops[CurrentAirdropContainer.id]
+        if LocalAirdrops and LocalAirdrops.containers[CurrentAirdropContainer.containerId] then
+            local container = LocalAirdrops.containers[CurrentAirdropContainer.containerId]
+            if container.vehicle then
+                dict = "anim@amb@clubhouse@tutorial@bkr_tut_ig3@"
+                anim = "machinic_loop_mechandplayer"
+            end
+        end
+        PlayAnim(PlayerPedId(), dict, anim, 8.0, 8.0, -1, 49, 1.0, false, false, false)
+    end
     TriggerServerEvent("pickle_airdrops:updateAirdropContainerItemStatus", CurrentAirdropContainer.id, CurrentAirdropContainer.containerId, data.slot, data.status)
     cb("ok")
 end)

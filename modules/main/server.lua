@@ -148,6 +148,7 @@ function StartAirdropTemplate(templateId, data)
     InitializeAirdrop({
         coords = data.coords,
         heading = data.heading,
+        unlockTime = templateCfg.unlockTime or Config.Airdrops.defaultUnlockTime,
         dropType = templateCfg.dropType or "object",
         dropBlipEnabled = templateCfg.dropBlipEnabled,
         spawnRadiusMultiplier = templateCfg.spawnRadiusMultiplier,

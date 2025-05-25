@@ -56,6 +56,7 @@ Config.AirdropTemplates = {
         radiusBlipEnabled = true, -- This enables the radius blip on the map.
         dropModel = `sm_prop_smug_crate_01a`, -- Model of the airdrop container.
         minidropModel = `sm_prop_smug_crate_01a`, -- Model of the airdrop containers that appear when the airdrop contains multiple containers.
+        unlockTime = 60, -- Time in seconds to unlock the airdrop container. If set to 0, it will use the default unlock time in Config.Airdrops.
         items = { 
             -- If an item's capture time is not specified, it will use the default capture time in Config.Airdrops.
             -- If an item's itemType is not specified, it will interpret it as a item. Types: "item", "weapon", "money".
@@ -79,6 +80,7 @@ Config.AirdropTemplates = {
         spawnRadiusMultiplier = 0.5, -- 1.0 is to spawn objects to the fullest extent, 0.1 is to spawn objects in a small area in the center.
         dropBlipEnabled = true, -- This enables the drop blip on the map.
         radiusBlipEnabled = true, -- This enables the radius blip on the map.
+        unlockTime = 60, -- Time in seconds to unlock the airdrop container. If set to 0, it will use the default unlock time in Config.Airdrops.
         vehicles = { 
             -- If an item's capture time is not specified, it will use the default capture time in Config.Airdrops.
             -- The higher an item's chance, the more likely it is to spawn in the airdrop container. 
