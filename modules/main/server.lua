@@ -293,6 +293,9 @@ RegisterCommand(Config.RandomDropCommand, function(source, args, rawCommand)
     local location = Config.RandomDropZones[math.random(1, #Config.RandomDropZones)]
     local coords = GetRandomPointInCircle(location.coords, location.radius)
     local heading = location.heading or math.random(0, 360)
+    if Config.Airdrops.announceScheduledDrops then
+        ShowNotification(-1, _L("airdrop_incoming_announce", Config.AirdropTemplates[dropTemplate].label))
+    end
     StartAirdropTemplate(dropTemplate, {
         coords = coords,
         heading = heading,
