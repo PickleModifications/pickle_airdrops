@@ -209,6 +209,11 @@ function CreateLocalAirdrop(id, data)
                 for containerId, container in pairs(airdrop.containers) do
                     if container.pendingPlacement and #(pedCoords - container.coords) < Config.RenderDistance then
                         container.pendingPlacement = false
+                        local found, groundZ = GetGroundZExcludingObjectsFor_3dCoord(container.location.coords.x, container.location.coords.y, container.location.coords.z + 1000.0, 0.0, false)
+                        if not found then
+                            groundZ = container.location.coords.z
+                        end
+                        container.coords = vector3(container.location.coords.x, container.location.coords.y, groundZ)
                         if dropType == "vehicle" then
                             SetVehicleOnGroundProperly(container.dropObject)
                         else
@@ -295,6 +300,15 @@ function AirdropInteraction(id, containerId)
     })
     SetNuiFocus(true, true)
     TransitionToBlurred(250)
+    CreateThread(function()
+        while CurrentAirdropContainer do
+            if Config.IsPlayerDead and Config.IsPlayerDead() then
+                ExitAirdropContainer()
+                break
+            end
+            Wait(1000)
+        end
+    end)
 end
 
 function ExitAirdropContainer()
@@ -488,6 +502,7 @@ RegisterNetEvent("pickle_airdrops:replicateVehicle", function(vehicleData)
     SetEntityInvincible(vehicle, true)
     SetEntityAsMissionEntity(vehicle, true, true)
     SetVehicleNumberPlateText(vehicle, vehicleData.plate)
+    SetPedIntoVehicle(PlayerPedId(), vehicle, -1)
     Config.GiveKeys(vehicle, vehicleData.plate)
 end)
 

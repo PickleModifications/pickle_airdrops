@@ -158,14 +158,6 @@ function IsPlayerAdmin(source)
     return false
 end
 
-function AddSocietyMoney(name, amount)
-    if Config.FrameworkSettings.society == "qb-management" then
-        exports["qb-management"]:AddMoney(name, amount)
-    else
-        exports["qb-banking"]:AddMoney(name, amount)
-    end
-end
-
 -- Inventory Fallback
 
 CreateThread(function()

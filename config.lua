@@ -8,6 +8,17 @@ Config.ImageDirectory = "nui://ox_inventory/web/images/"
 Config.WeaponsAreItems = true -- This enables the use of weapons as items. If set to false, weapons will be treated as items and not as weapons.
 Config.RandomDropCommand = "airdrop" -- Command to spawn a random drop. /airdrop <dropTemplate>
 
+Config.FrameworkSettings = {
+    dirtyMoney = "DEFAULT",
+}
+
+Config.IsPlayerDead = function()
+    if GetResourceState("wasabi_ambulance") == "started" then
+        return exports.wasabi_ambulance:isPlayerDead()
+    end
+    return IsEntityDead(PlayerPedId())
+end
+
 Config.GiveKeys = function(vehicle, plate)
     -- Replace this line with your export / event to give keys for your vehicle.
 end
