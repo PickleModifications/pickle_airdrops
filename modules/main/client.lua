@@ -86,12 +86,12 @@ function CreateLocalAirdrop(id, data)
         local landed = false
         while LocalAirdrops[id] do
             local airdrop = LocalAirdrops[id]
-            local airdropContainer = airdrop.containers[1]
-            if airdropContainer.unlockTime <= 0 then 
-                airdropContainer.unlockTime = 0
-                break
-            elseif airdropContainer.timerStarted then
-                airdropContainer.unlockTime = airdropContainer.unlockTime - 1
+            for containerId, container in pairs(airdrop.containers) do
+                if container.unlockTime <= 0 then
+                    container.unlockTime = 0
+                elseif container.timerStarted then
+                    container.unlockTime = container.unlockTime - 1
+                end 
             end
             Wait(1000)
         end
@@ -202,8 +202,6 @@ function CreateLocalAirdrop(id, data)
                         end
                     end
                 end
-            elseif landed and not airdrop.planeObject then
-                break
             else
                 local pedCoords = GetEntityCoords(PlayerPedId())
                 for containerId, container in pairs(airdrop.containers) do
@@ -219,6 +217,17 @@ function CreateLocalAirdrop(id, data)
                         else
                             PlaceObjectOnGroundProperly(container.dropObject)
                         end
+                    end
+                end
+                if landed and not airdrop.planeObject then
+                    local canBreak = true
+                    for containerId, container in pairs(airdrop.containers) do
+                        if container.pendingPlacement then
+                            canBreak = false
+                        end
+                    end
+                    if canBreak then
+                        break
                     end
                 end
             end
